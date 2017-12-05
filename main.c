@@ -7,10 +7,8 @@ void PWM(int freq, int pulse_width)
     P1SEL |= BIT2;                           // P1.2
     CCR0 = 500000 / freq - 1;                // set CCR0 to the desired PWM frequency
     CCTL1 = OUTMOD_7;                        // CCR1 toggle/set
-    CCR1 = pulse_width * 500000 / 1000000;   // set CCR1 to the desired PWM pulse width
+    CCR1 = pulse_width * 0.5;             // set CCR1 to the desired PWM pulse width ( 500 kHz / 1e6)
     TACTL = TASSEL_2 + MC_1 + ID_1;          // SMCLK, up-down mode, 500 kHz
-
-
 
 }
 
