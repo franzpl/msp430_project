@@ -19,8 +19,8 @@ int main(void)
     BCSCTL1 = CALBC1_1MHZ;
     DCOCTL  = CALDCO_1MHZ;
 
-    int freq = 130;                           // PWM frequency in Hz
-    int pulse_width = 60;                     // PWM pulse_width in microseconds
+    const int freq = 130;                           // PWM frequency in Hz
+    const int pulse_width = 60;                     // PWM pulse_width in microseconds
 
     PWM(freq, pulse_width);
 
