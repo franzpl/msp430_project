@@ -17,7 +17,7 @@ void SPI_init() {
 
         P1OUT |= BIT5; // 1.5 CS
         P1DIR |= BIT5;
-        P1SEL = BIT2 | BIT4; // 1.1 UCA0SIMO, 1.4 UCA0CLK
+        P1SEL = BIT2 | BIT4; // 1.2 UCA0SIMO, 1.4 UCA0CLK
         P1SEL2 = BIT2 | BIT4;
 
         UCA0CTL1 = UCSWRST;
