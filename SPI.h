@@ -1,0 +1,20 @@
+#ifndef SPI_H_
+#define SPI_H_
+
+#define PORT_SPI_SEL0   P1SEL
+#define PORT_SPI_SEL1   P1SEL2
+#define MISO BIT1
+#define MOSI BIT2
+#define CLK BIT4
+
+#define CS_AD5290 BIT5
+#define PORT_AD5290_OUT P1OUT
+#define PORT_AD5290_DIR P1OUT
+
+#define CS_RF430CL330H BIT4
+#define PORT_RF430CL330H_OUT P1OUT
+#define PORT_RF430CL330H_DIR P1OUT
+
+void SPISetup();
+
+#endif
