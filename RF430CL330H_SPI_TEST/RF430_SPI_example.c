@@ -1,6 +1,3 @@
-/*
- * {RF430_example.c}
- *
 #include "msp430.h"
 #include "RF430_SPI_example.h"
 
