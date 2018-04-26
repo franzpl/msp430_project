@@ -1,13 +1,57 @@
-#include <msp430g2553.h>
+/*Eddie LaCost has adapted the TI example code http://www.ti.com/tool/RF430CL330H-EXAMPLE-CODE (sloc303) to handle
+ *SPI communication with RF430CL330H:
+ *https://e2e.ti.com/support/wireless_connectivity/nfc_rfid/f/667/t/315391?Initialization-RF430CL330H-NFC-SPI-interface-after-power-up
+ *Thanks! */
+
+#include "msp430.h"
 #include "NFC.h"
+#include "SPI.h"
 
 unsigned char dummy = 0;
 
 unsigned char RxData[2] = {0,0};
-unsigned char TxAddr[2] = {0,0};
 unsigned char TxData[2] = {0,0};
+unsigned char TxAddr[2] = {0,0};
 
-void SPI_Write_Register(unsigned int address, unsigned int value)
+void NFCSetup(void)
+
+{
+        // RST RF430 (in case board remained powered but the MSP430 reset for some reason - MSP430 RST button pushed for example)
+        PORT_RST_OUT &= ~RST;
+        PORT_RST_DIR |= RST;                    // RF430CL330H device in Reset
+        __delay_cycles(1000);
+        PORT_RST_OUT |= RST;                    // Release the RF430CL330H from Reset
+
+        __delay_cycles(100000);
+
+        //configure LED1
+        PORT_LED_DIR |= LED1;                   // Set as Output
+        PORT_LED_OUT &= ~LED1;                  // Start LED off
+
+        //configure pin for INTO interrupt
+        PORT_INTO_SEL0 &= ~INTO;                // Confirming GPIO pin functionality
+        PORT_INTO_SEL1 &= ~INTO;
+        PORT_INTO_DIR &= ~INTO;                 // Set as Input
+        PORT_INTO_OUT |= INTO;                  // Set output register high
+        PORT_INTO_REN |= INTO;                  // Internal pull-up resistor
+
+
+        PORT_INTO_IFG &= ~INTO;                 // Clear interrupt flag
+        PORT_INTO_IES |= INTO;                  // Set interrupt trigger as high-to-low transition, since INTO will be setup active low below
+
+        __delay_cycles(30000);                // Leave time for the RF430CL33H to get itself initialized; should be 20ms or greater
+
+        //CS Select
+        SelectRF430();
+
+       // PORT_LED_OUT |= LED1;
+        //__delay_cycles(1000000);
+       // while(!(Read_Register(STATUS_REG) & READY)); // Wait until READY bit has been set
+       // PORT_LED_OUT &= ~LED1;
+
+}
+
+void Write_Register(unsigned int address, unsigned int value)
 {
     TxAddr[0] = address >> 8;
     TxAddr[1] = address & 0x00FF;
@@ -16,7 +60,7 @@ void SPI_Write_Register(unsigned int address, unsigned int value)
 
     P2OUT &= ~BIT5; //CS
 
-    __delay_cycles(15);
+    __delay_cycles(1000);
 
     while(!(IFG2 & UCB0TXIFG));
     UCB0TXBUF = 0x02; //Write command byte
@@ -46,7 +90,7 @@ void SPI_Write_Register(unsigned int address, unsigned int value)
     P2OUT |= BIT5; //CS
 }
 
-void SPI_Write_Register8(unsigned int address, unsigned int value)
+void Write_Register8(unsigned int address, unsigned int value)
 {
     TxAddr[0] = address >> 8;
     TxAddr[1] = address & 0x00FF;
@@ -55,7 +99,7 @@ void SPI_Write_Register8(unsigned int address, unsigned int value)
 
     P2OUT &= ~BIT5; //CS
 
-    __delay_cycles(15);
+    __delay_cycles(1000);
 
     while(!(IFG2 & UCB0TXIFG));
     UCB0TXBUF = 0x02; //Write command byte
@@ -85,7 +129,7 @@ void SPI_Write_Register8(unsigned int address, unsigned int value)
     P2OUT |= BIT5; //CS
 }
 
-void SPI_Write_Register_BIP8(unsigned int address, unsigned int value)
+void Write_Register_BIP8(unsigned int address, unsigned int value)
 {
     unsigned char BIP8 = 0;
 
@@ -95,6 +139,8 @@ void SPI_Write_Register_BIP8(unsigned int address, unsigned int value)
     TxData[1] = value & 0x00FF;
 
     P2OUT &= ~BIT5; //CS
+
+    __delay_cycles(1000);
 
     while(!(IFG2 & UCB0TXIFG));
     UCB0TXBUF = 0x02; //Write command byte
@@ -135,7 +181,7 @@ void SPI_Write_Register_BIP8(unsigned int address, unsigned int value)
 }
 
 
-void SPI_Write_Continuous(unsigned int address, unsigned char* write_data, unsigned int data_length)
+void Write_Continuous(unsigned int address, unsigned char* write_data, unsigned int data_length)
 {
     unsigned int i;
     TxAddr[0] = address >> 8;
@@ -145,6 +191,8 @@ void SPI_Write_Continuous(unsigned int address, unsigned char* write_data, unsig
     //TxData[1] = value & 0x00FF;
 
     P2OUT &= ~BIT5; //CS
+
+    __delay_cycles(1000);
 
     __delay_cycles(15);
 
@@ -175,7 +223,7 @@ void SPI_Write_Continuous(unsigned int address, unsigned char* write_data, unsig
     P2OUT |= BIT5; //CS
 }
 
-unsigned int SPI_Read_Register(unsigned int address)
+unsigned int Read_Register(unsigned int address)
 {
     TxAddr[0] = address >> 8;
     TxAddr[1] = address & 0x00FF;
@@ -215,17 +263,20 @@ unsigned int SPI_Read_Register(unsigned int address)
     RxData[1] = UCB0RXBUF;
 
     P2OUT |= BIT5; //CS
+    __delay_cycles(1000);
 
     return (RxData[1] << 8 | RxData[0]);
 }
 
-unsigned int SPI_Read_Register_BIP8(unsigned int address)
+unsigned int Read_Register_BIP8(unsigned int address)
 {
     unsigned char BIP8 = 0;
     TxAddr[0] = address >> 8;
     TxAddr[1] = address & 0x00FF;
 
     P2OUT &= ~BIT5; //CS
+
+    __delay_cycles(1000);
 
     while(!(IFG2 & UCB0TXIFG));
     //UCA0TXBUF = 0x03; //Read command byte
@@ -274,13 +325,15 @@ unsigned int SPI_Read_Register_BIP8(unsigned int address)
     return (RxData[0] << 8 | RxData[1]);
 }
 
-void SPI_Read_Continuous(unsigned int address, unsigned char* read_data, unsigned int data_length)
+void Read_Continuous(unsigned int address, unsigned char* read_data, unsigned int data_length)
 {
     unsigned int i;
     TxAddr[0] = address >> 8;
     TxAddr[1] = address & 0x00FF;
 
     P2OUT &= ~BIT5; //CS
+
+    __delay_cycles(1000);
 
     while(!(IFG2 & UCB0TXIFG));
     //UCA0TXBUF = 0x03; //Read command byte
@@ -313,3 +366,4 @@ void SPI_Read_Continuous(unsigned int address, unsigned char* read_data, unsigne
 
     P2OUT |= BIT5; //CS
 }
+
